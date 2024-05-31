@@ -85,6 +85,19 @@ def show_map():
         # Detect and draw the largest red cloud contour
         detect_and_draw_largest_red_cloud(my_map)
 
+        # Inject JavaScript to remove the image overlay
+        remove_overlay_js = """
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var overlays = document.getElementsByClassName('leaflet-image-layer');
+            for (var i = 0; i < overlays.length; i++) {
+                overlays[i].style.display = 'none';
+            }
+        });
+        </script>
+        """
+        my_map.get_root().html.add_child(folium.Element(remove_overlay_js))
+
     # Save the map to an HTML file and open it in a web browser
     map_path = "route_map.html"
     my_map.save(map_path)
