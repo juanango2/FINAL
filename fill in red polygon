@@ -167,8 +167,8 @@ def detect_and_draw_largest_red_cloud(my_map):
         lon = lon_min + (lon_max - lon_min) * x / width
         polyline.append((lat, lon))
     
-    # Add the polyline to the map
-    folium.PolyLine(polyline, color="red", weight=2).add_to(my_map)
+    # Add the filled polygon to the map
+    folium.Polygon(locations=polyline, color="red", fill=True, fill_opacity=1).add_to(my_map)
     
     return polyline
 
@@ -186,14 +186,14 @@ def draw_polygon_on_canvas(polyline_coords):
     # Clear the canvas
     canvas.delete("all")
 
-    # Draw the polygon on the canvas
+    # Draw the filled polygon on the canvas
     if polyline_coords:
         canvas_coords = []
         for lat, lon in polyline_coords:
             x, y = lat_lon_to_canvas(lat, lon, square_size, square_size)
             canvas_coords.append((x, y))
 
-        canvas.create_polygon(canvas_coords, outline='red', fill='', width=2)
+        canvas.create_polygon(canvas_coords, outline='red', fill='red', width=2)
 
 # Create the main application window
 root = tk.Tk()
