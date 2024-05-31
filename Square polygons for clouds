@@ -5,13 +5,13 @@ from tkinter import ttk
 import folium
 import webbrowser
 from PIL import Image, ImageTk
-import cv2
-import numpy as np
 import base64
+import numpy as np
+import cv2
 
 selected_file_path = None
-coordinates_list = []
 selected_image_path = None
+coordinates_list = []
 
 # Function to handle the button click and open the file dialog for KML
 def select_route():
@@ -82,8 +82,8 @@ def show_map():
         )
         image_overlay.add_to(my_map)
 
-        # Detect red regions and draw a polygon
-        detect_and_draw_red_regions(selected_image_path, my_map)
+        # Detect and draw red cloud contours
+        detect_and_draw_red_clouds(my_map)
 
     # Save the map to an HTML file and open it in a web browser
     map_path = "route_map.html"
@@ -112,40 +112,42 @@ def display_image(file_path):
 def clear_image():
     image_label.config(image='', bg="black")
 
-# Function to detect red regions in the image and draw a polygon around them
-def detect_and_draw_red_regions(image_path, folium_map):
-    img = cv2.imread(image_path)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+# Function to detect red clouds in the image and draw contours on the map
+def detect_and_draw_red_clouds(my_map):
+    # Load the image using OpenCV
+    img = cv2.imread(selected_image_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    # Define the lower and upper bounds for the red color in the image
+    lower_red = np.array([150, 0, 0])
+    upper_red = np.array([255, 100, 100])
 
-    # Define the range for red color in HSV
-    lower_red = np.array([0, 50, 50])
-    upper_red = np.array([10, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red, upper_red)
-
-    lower_red = np.array([170, 50, 50])
-    upper_red = np.array([180, 255, 255])
-    mask2 = cv2.inRange(hsv, lower_red, upper_red)
-
-    mask = mask1 + mask2
+    # Create a mask for the red areas
+    mask = cv2.inRange(img, lower_red, upper_red)
 
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Calculate the bounding box for the detected red areas
+    bounds = [[14.145824, -84.557812], [14.145968, -64.419774], [-6.102251, -84.557876], [-6.102301, -64.419760]]
+    lat_min, lat_max = bounds[2][0], bounds[0][0]
+    lon_min, lon_max = bounds[0][1], bounds[1][1]
 
-    # Get the georeferenced bounds
-    upper_left = (14.145824, -84.557812)
-    upper_right = (14.145968, -64.419774)
-    lower_left = (-6.102251, -84.557876)
-    lower_right = (-6.102301, -64.419760)
+    # Get the image dimensions
+    height, width, _ = img.shape
 
+    # Normalize the contour coordinates to the geographical bounds
     for contour in contours:
-        if cv2.contourArea(contour) > 1000:  # Filter small areas
-            contour_points = []
-            for point in contour:
-                x, y = point[0]
-                lat = upper_left[0] + (lower_left[0] - upper_left[0]) * (y / img.shape[0])
-                lon = upper_left[1] + (upper_right[1] - upper_left[1]) * (x / img.shape[1])
-                contour_points.append((lat, lon))
-            folium.PolyLine(contour_points, color="red", weight=2.5).add_to(folium_map)
+        hull = cv2.convexHull(contour)  # Get the convex hull of the contour
+        polyline = []
+        for point in hull:
+            x, y = point[0]
+            lat = lat_min + (lat_max - lat_min) * (height - y) / height
+            lon = lon_min + (lon_max - lon_min) * x / width
+            polyline.append((lat, lon))
+        
+        # Add the polyline to the map
+        folium.PolyLine(polyline, color="red", weight=2).add_to(my_map)
 
 # Create the main application window
 root = tk.Tk()
