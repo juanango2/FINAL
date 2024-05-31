@@ -82,8 +82,8 @@ def show_map():
         )
         image_overlay.add_to(my_map)
 
-        # Detect and draw red cloud contours
-        detect_and_draw_red_clouds(my_map)
+        # Detect and draw the largest red cloud contour
+        detect_and_draw_largest_red_cloud(my_map)
 
     # Save the map to an HTML file and open it in a web browser
     map_path = "route_map.html"
@@ -112,8 +112,8 @@ def display_image(file_path):
 def clear_image():
     image_label.config(image='', bg="black")
 
-# Function to detect red clouds in the image and draw contours on the map
-def detect_and_draw_red_clouds(my_map):
+# Function to detect the largest red cloud in the image and draw its contour on the map
+def detect_and_draw_largest_red_cloud(my_map):
     # Load the image using OpenCV
     img = cv2.imread(selected_image_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -128,6 +128,12 @@ def detect_and_draw_red_clouds(my_map):
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
+    if not contours:
+        return  # No red clouds found
+
+    # Find the largest contour based on area
+    largest_contour = max(contours, key=cv2.contourArea)
+    
     # Calculate the bounding box for the detected red areas
     bounds = [[14.145824, -84.557812], [14.145968, -64.419774], [-6.102251, -84.557876], [-6.102301, -64.419760]]
     lat_min, lat_max = bounds[2][0], bounds[0][0]
@@ -137,17 +143,16 @@ def detect_and_draw_red_clouds(my_map):
     height, width, _ = img.shape
 
     # Normalize the contour coordinates to the geographical bounds
-    for contour in contours:
-        hull = cv2.convexHull(contour)  # Get the convex hull of the contour
-        polyline = []
-        for point in hull:
-            x, y = point[0]
-            lat = lat_min + (lat_max - lat_min) * (height - y) / height
-            lon = lon_min + (lon_max - lon_min) * x / width
-            polyline.append((lat, lon))
-        
-        # Add the polyline to the map
-        folium.PolyLine(polyline, color="red", weight=2).add_to(my_map)
+    hull = cv2.convexHull(largest_contour)  # Get the convex hull of the largest contour
+    polyline = []
+    for point in hull:
+        x, y = point[0]
+        lat = lat_min + (lat_max - lat_min) * (height - y) / height
+        lon = lon_min + (lon_max - lon_min) * x / width
+        polyline.append((lat, lon))
+    
+    # Add the polyline to the map
+    folium.PolyLine(polyline, color="red", weight=2).add_to(my_map)
 
 # Create the main application window
 root = tk.Tk()
