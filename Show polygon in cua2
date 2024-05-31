@@ -83,7 +83,10 @@ def show_map():
         image_overlay.add_to(my_map)
 
         # Detect and draw the largest red cloud contour
-        detect_and_draw_largest_red_cloud(my_map)
+        polyline_coords = detect_and_draw_largest_red_cloud(my_map)
+        
+        # Draw the polygon in the canvas of cua2
+        draw_polygon_on_canvas(polyline_coords)
 
         # Inject JavaScript to remove the image overlay
         remove_overlay_js = """
@@ -142,7 +145,7 @@ def detect_and_draw_largest_red_cloud(my_map):
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if not contours:
-        return  # No red clouds found
+        return []  # No red clouds found
 
     # Find the largest contour based on area
     largest_contour = max(contours, key=cv2.contourArea)
@@ -166,6 +169,31 @@ def detect_and_draw_largest_red_cloud(my_map):
     
     # Add the polyline to the map
     folium.PolyLine(polyline, color="red", weight=2).add_to(my_map)
+    
+    return polyline
+
+# Function to draw the polygon on the canvas in cua2
+def draw_polygon_on_canvas(polyline_coords):
+    # Convert lat/lon to canvas coordinates (x, y)
+    def lat_lon_to_canvas(lat, lon, canvas_width, canvas_height):
+        # Here you need to implement the correct scaling to match the map bounds
+        lat_min, lat_max = -6.102301, 14.145824
+        lon_min, lon_max = -84.557812, -64.419760
+        x = canvas_width * (lon - lon_min) / (lon_max - lon_min)
+        y = canvas_height * (lat_max - lat) / (lat_max - lat_min)
+        return x, y
+
+    # Clear the canvas
+    canvas.delete("all")
+
+    # Draw the polygon on the canvas
+    if polyline_coords:
+        canvas_coords = []
+        for lat, lon in polyline_coords:
+            x, y = lat_lon_to_canvas(lat, lon, square_size, square_size)
+            canvas_coords.append((x, y))
+
+        canvas.create_polygon(canvas_coords, outline='red', fill='', width=2)
 
 # Create the main application window
 root = tk.Tk()
@@ -204,6 +232,10 @@ treeview.column("LAT", anchor=tk.CENTER)
 treeview.column("ALT", anchor=tk.CENTER)
 
 treeview.pack(expand=True, fill=tk.BOTH)
+
+# Add a Canvas widget to cua2 for displaying the polygon
+canvas = tk.Canvas(cua2, width=square_size, height=square_size, bg="black")
+canvas.pack()
 
 # Add an image label to cua3 for displaying the selected image
 image_label = tk.Label(cua3, bg="black")
