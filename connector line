@@ -53,12 +53,19 @@ def show_map():
     for lat, long, alt in coordinates_list:
         folium.CircleMarker(
             location=[lat, long],
-            radius=5,  # Adjust the radius as needed
+            radius=3,  # Adjust the radius as needed
             popup=f"Altitude: {alt}",
-            color="blue",
+            color="black",
             fill=True,
-            fill_color="blue"
+            fill_color="black"
         ).add_to(my_map)
+
+    # Add lines connecting each pair of consecutive points
+    folium.PolyLine(
+        locations=[(lat, long) for lat, long, alt in coordinates_list],
+        color="white",
+        weight=1
+    ).add_to(my_map)
 
     # Save the map to an HTML file and open it in a web browser
     map_path = "route_map.html"
